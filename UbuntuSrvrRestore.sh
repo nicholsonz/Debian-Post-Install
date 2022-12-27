@@ -248,7 +248,7 @@ chown -R root:$smbgrp /srv/samba
 # restore custom cron jobs
 rsync -arv $bkpdir/etc/cron.custom /etc
 # restore crontab for root
-crontab /home/zach/repo/crontab.bak
+crontab /home/$adminUser/repo/crontab.bak
 # verify crontab entries
 echo 
 echo "###############################"
