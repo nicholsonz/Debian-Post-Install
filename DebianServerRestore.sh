@@ -9,15 +9,23 @@ srvrname=fully qualified domain name
 dbuser=admin
 dbpasswd=password
 adminUser=admin
-smbuser=smbusername
-smbgrp=smbusergroup
-bkpdir=/mnt/backup/$srvrname
-bkpdev=/dev/sdb
+smbuser=smbusername			# samba user
+smbgrp=smbusergroup			# samba group
+bkpdir=/mnt/backup/$srvrname		# mount point of backup dir
+bkpdev=/dev/sdb				# location of backup drive with backup files/dirs
 ip=10.10.10.10
-uuid=      	#find uuid of backup device for fstab entry: "sudo blkid /dev/sd?"
+uuid=      				# find uuid of backup device for fstab entry: "sudo blkid /dev/sd?"
 phpvrsn=  	
 
 ###########################################################
+
+############ Check that we are up-to-date
+echo "List any packages to upgrade before running installation"
+echo "#######################################################"
+apt list upgradable
+echo "#######################################################"
+echo "If any packages listed above, halt the install with Ctrl-z and upgrade then reboot first!"
+sleep 15
 
 ############ Set time and time zone
 dpkg-reconfigure tzdata
@@ -31,7 +39,6 @@ echo "#####################"
 echo ""
 echo "If timezone is incorrect set it manually - timedatectl set-timezone America/Chicago"
 sleep 7 
-
 
 ############ Make backup directory, create fstab entry and mount the backup drive
 
@@ -59,18 +66,16 @@ hostnamectl set-hostname $srvrname
 
 echo "$ip   $srvrname" >>/etc/hosts
 
-## Update system first 
-apt-get upgrade -y
+## setup systemd-timesyncd for system time synchoronization
+apt install systemd-timesyncd
+rsync -arv $bkpdir/etc/systemd/timesyncd.conf /etc/systemd/
 
 ## Extra packages
 apt-get install -y lnav lm-sensors wget whois bash-completion clamav smartmontools haveged goaccess tuned colorized-logs
 
 ## PHP install
-apt-get install -y php php-mysql php-zip php-imap php-xml php-mbstring php-intl php-pear zip unzip git composer php-ldap php-imagick php-gd
-
-## PHPMYAdmin install
-apt-get install -y phpmyadmin
-rsync -arv $bkpdir/etc/phpmyadmin/apache.conf /etc/phpmyadmin
+apt install -y $phpv $phpv-bz2 $phpv-cli $phpv-common $phpv-curl $phpv-gd $phpv-imap $phpv-intl $phpv-ldap $phpv-mbstring $phpv-mysql $phpv-imagick $phpv-xml $phpv-zip $phpv-soap $phpv-readline $phpv-opcache
+apt install -y zip unzip git composer
 
 
 ###########################################################################################
@@ -88,8 +93,8 @@ a2ensite *
 
 #apt install -y libapache2-mod-evasive # DOS protection redundant and too sensitive.  Already included in firewall
 
-# Mod security for Content Security Policies - good
-apt install libapache2-mod-security2
+# Mod security for Content Security Policies
+#apt install libapache2-mod-security2
 a2enmod security2 headers ssl rewrite
 
 # restore configuration files for modsecurity
@@ -97,13 +102,6 @@ rsync -arv $bkpdir/etc/modsecurity/modsecurity.conf /etc/modsecurity
 rsync -arv $bkpdir/etc/modsecurity/crs/crs-setup.conf /etc/modsecurity/crs
 rsync -arv $bkpdir/etc/apache2/conf-available/security.conf /etc/apache2/conf-available
 
-systemctl restart apache2
-
-
-# install certbot and configure apache to use ssl
-snap install --classic certbot
-ln -s /snap/bin/certbot /usr/bin/certbot
-certbot --apache
 
 # Create default self-signed ssl certificates for localhost
 
@@ -120,6 +118,15 @@ else
     echo "Key pair already exists."
 
 fi
+
+systemctl restart apache2
+
+# install certbot and configure apache to use ssl
+apt install -y certbot python3-certbot-apache
+certbot --apache
+
+
+
 #####################################################################
 #			Cockpit and related packages                #
 #####################################################################
@@ -131,6 +138,7 @@ mkdir /usr/lib/x86_64-linux-gnu/udisks2/modules
 # if problem with software updates - "vim /etc/netplan/00-installer-config.yaml" and add renderer: NetworkManager to end of file
 systemctl disable systemd-networkd
 netplan apply 
+
 ####################################################################
 #			MariaDB Install                            #
 #################################################################### 
@@ -148,6 +156,7 @@ GRANT ALL PRIVILEGES ON *.* TO '$dbuser'@'localhost' IDENTIFIED BY '$dbpasswd';
 _EOF_
 
 # Gunzip latest database backup sql.gz file for each database and restore the database
+# **** The following may no longer work due to developer changes made to Mariadb package ***
 
 echo "Listing of backed up databases:"
 echo "$(ls -I "*.log" $bkpdir/sql)"
@@ -173,6 +182,10 @@ fi
 done
 
 echo "Securing SQL installation"
+
+############ PHPMYAdmin install - needs to be installed after database install
+apt-get install -y phpmyadmin
+rsync -arv $bkpdir/etc/phpmyadmin/apache.conf /etc/phpmyadmin
 
 
 ############ Postfix and Dovecot
@@ -218,6 +231,7 @@ ufw allow 9090      #Cockpit
 ufw allow 2020      #SSHD
 ufw allow 587
 ufw allow 465
+ufw allow 5222      #Prosody IM server
 ufw reload
 ufw enable
 
