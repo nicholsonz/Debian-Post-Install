@@ -22,7 +22,8 @@ phpvrsn=
 ############ Check that we are up-to-date
 echo "List any packages to upgrade before running installation"
 echo "#######################################################"
-apt list upgradable
+apt update
+apt list --upgradable
 echo "#######################################################"
 echo "If any packages listed above, halt the install with Ctrl-z and upgrade then reboot first!"
 sleep 15
