@@ -9,6 +9,7 @@ srvrname=fully qualified domain name
 dbuser=admin
 dbpasswd=password
 adminUser=admin
+adminEmail=admin@server.net
 smbuser=smbusername			# samba user
 smbgrp=smbusergroup			# samba group
 bkpdir=/mnt/backup/$srvrname		# mount point of backup dir
@@ -283,20 +284,24 @@ mkdir /var/cache/logwatch
 
 ############# Tripwire
 apt-get install tripwire
-# Segmentation Fault Error - edit the twcfg.txt file and add RESOLVE_IDS_TO_NAMES =false
-# update config file after edit
-twadmin --create-cfgfile -S site.key /etc/tripwire/twcfg.txt 
-# automate the no directory list and exclusion *needs editing to work on ubuntu
-sh -c "tripwire --check | grep Filename > no-directory.txt"
-for f in $(grep "Filename:" no-directory.txt | cut -f2 -d:); do
-sed -i "s|\($f\) |#\\1|g" /etc/tripwire/twpol.txt
-done
-# update policy file
-twadmin --create-polfile -S site.key /etc/tripwire/twpol.txt
-# initialize database
+# backup original twpol.txt file and restore backuped copy
+mv /etc/tripwire/twpol.txt /etc/tripwire/twpol.txt.orig
+rsync -arv $bkpdir/etc/tripwire/twpol.txt
+# initialize the database
 tripwire --init
-# test email delivery of tripwire
-tripwire --test --email root
+# create file with filename/dir errors
+sh -c "tripwire --check | grep Filename > no-dir.txt"
+# use bash script to clean up twpol.txt and remove errors
+for f in $(grep "Filename:" no-directory.txt | cut -f2 -d:); do
+   sed -i "s|\($f\) |#\\1|g" /etc/tripwire/twpol.txt
+   done
+# regenerate and re-sign the tripwire policy
+twadmin -m P /etc/tripwire/twpol.txt
+# initialize again
+tripwire --init
+# verify configuration
+tripwire --check
+tripwire --test --email $adminEmail
 
 ############# RKHunter installation and update
 apt-get install -y rkhunter
