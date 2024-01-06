@@ -1,22 +1,22 @@
 #!/bin/bash
 
 ##########################################################
-# Automated Ubuntu server installation and configuration
+# Automated Debian server installation and configuration
 ##########################################################
 
 # Set variables
-srvrname=fully qualified domain name
-dbuser=admin
-dbpasswd=password
-adminUser=admin
-adminEmail=admin@server.net
-smbuser=smbusername			# samba user
-smbgrp=smbusergroup			# samba group
-bkpdir=/mnt/backup/$srvrname		# mount point of backup dir
-bkpdev=/dev/sdb				# location of backup drive with backup files/dirs
-ip=10.10.10.10
-uuid=      				# find uuid of backup device for fstab entry: "sudo blkid /dev/sd?"
-phpvrsn=  	
+srvrname=				# FQDN for local server machine
+dbuser=
+dbpasswd=
+adminUser=
+adminEmail=
+smbuser=				# samba user
+smbgrp=					# samba group
+bkpdir=/mnt/backup/$srvrname    	# mount point of backup dir
+bkpdev=/dev/sdb                 	# location of backup drive with backup files/dirs
+ip=
+uuid=      	                	#find uuid of backup device for fstab entry: "sudo blkid /dev/sd?"
+phpv=8.2  	
 
 ###########################################################
 
@@ -26,8 +26,15 @@ echo "#######################################################"
 apt update
 apt list --upgradable
 echo "#######################################################"
-echo "If any packages listed above, halt the install with Ctrl-z and upgrade then reboot first!"
-sleep 15
+echo "If any packages are listed above abort the install, upgrade, and then reboot before continuing!"
+read -r -p "Continue with the restoration process? [Y / N] " response
+if [[ "$response" =~ ^([Nn][Oo]|[Nn])$ ]] 
+ then exit 1
+ else
+
+echo "#######################################################"
+echo "Clean any lingering packages"
+apt autoremove
 
 ############ Set time and time zone
 dpkg-reconfigure tzdata
@@ -39,11 +46,10 @@ echo "#####################"
 timedatectl
 echo "#####################"
 echo ""
-echo "If timezone is incorrect set it manually - timedatectl set-timezone America/Chicago"
+echo "If timezone is incorrect set it manually example for central locations - timedatectl set-timezone America/Chicago"
 sleep 7 
 
 ############ Make backup directory, create fstab entry and mount the backup drive
-
 mkdir /mnt/backup
 #echo UUID=$uuid  /mnt/backup  auto  defaults  0 0 >>/etc/fstab
 
@@ -58,7 +64,7 @@ else
 fi
 
 MNTPNT='/mnt/backup'
-if ! mountpoint -q ${MNTPNT}/; then
+if [ ! mountpoint -q ${MNTPNT}/ ]; then
 	echo "Drive not mounted! Cannot continue without backup volume mounted!"
 	exit 1
 fi
@@ -68,42 +74,75 @@ hostnamectl set-hostname $srvrname
 
 echo "$ip   $srvrname" >>/etc/hosts
 
+# Restore home dir for admin user
+rsync -arv $bkpdir/home/$admin/ /home/$admin
+
 ## setup systemd-timesyncd for system time synchoronization
 apt install systemd-timesyncd
 rsync -arv $bkpdir/etc/systemd/timesyncd.conf /etc/systemd/
 
+
 ## Extra packages
-apt-get install -y lnav lm-sensors wget whois bash-completion clamav smartmontools haveged goaccess tuned colorized-logs
+apt-get install -y lnav rsyslog lm-sensors wget whois bash-completion smartmontools haveged goaccess tuned colorized-logs
+
+# restore goaccess files
+rsync -arv $bkpdir/etc/goaccess/ /etc/goaccess
 
 ## PHP install
-apt install -y $phpv $phpv-bz2 $phpv-cli $phpv-common $phpv-curl $phpv-gd $phpv-imap $phpv-intl $phpv-ldap $phpv-mbstring $phpv-mysql $phpv-imagick $phpv-xml $phpv-zip $phpv-soap $phpv-readline $phpv-opcache
+apt install -y php$phpv php$phpv-bz2 php$phpv-cli php$phpv-common php$phpv-curl php$phpv-gd php$phpv-imap php$phpv-intl php$phpv-ldap php$phpv-mbstring php$phpv-mysql php$phpv-imagick php$phpv-xml php$phpv-zip php$phpv-soap php$phpv-readline php$phpv-opcache
 apt install -y zip unzip git composer
 
+## Prosody IM chat server install
+#apt install -y extrepo
+#extrepo enable prosody
+#apt update
+#apt install -y prosody
+#rsync -arv $bkpdir/etc/prosody/ /etc/prosody
+#systemctl enable prosody
+#systemctl start prosody
 
-###########################################################################################
-#			Apache web server and security packages			          #
-###########################################################################################
+# User and group creation for /html dirs write access
+groupadd webdev  # needed for access to specific /html dirs shared over sftp
+useradd -M joshnij
+usermod -a -G webdev joshnij
+usermod -a -G webdev zach
+
+
+#######################################################################
+#			Apache web server and security package        #
+#######################################################################
 #
 # install
 apt-get install -y apache2 openssl libapache2-mod-php
 # restore and configure
 openssl req -x509 -nodes -days 3650 -newkey rsa:2048 -keyout /etc/ssl/private/$srvrname.key -out /etc/ssl/certs/$srvrname.crt
+rsync -arv $bkpdir/etc/apache2/apache2.conf /etc/apache2
+#rsync -arv $bkpdir/etc/apache2/modsecurity-crs /etc/apache2
 rsync -arv $bkpdir/etc/apache2/sites-available/ /etc/apache2/sites-available
-cd /etc/apache2/sites-available
+rsync -arv $bkpdir/etc/apache2/conf-available/ /etc/apache2/conf-available
+# enable all available sites
 a2ensite *
 # install security packages for apache2
 
-#apt install -y libapache2-mod-evasive # DOS protection redundant and too sensitive.  Already included in firewall
+# DOS protection redundant and too sensitive.  Already included in firewall
+#apt install -y libapache2-mod-evasive
 
-# Mod security for Content Security Policies
-#apt install libapache2-mod-security2
-a2enmod security2 headers ssl rewrite
+# Disable potentially insecure modules for Apache2
+a2dismod deflate
 
-# restore configuration files for modsecurity
+# Install mod_security
+apt install libapache2-mod-security2
+
+# restore configuration files for mod_security
 rsync -arv $bkpdir/etc/modsecurity/modsecurity.conf /etc/modsecurity
 rsync -arv $bkpdir/etc/modsecurity/crs/crs-setup.conf /etc/modsecurity/crs
-rsync -arv $bkpdir/etc/apache2/conf-available/security.conf /etc/apache2/conf-available
 
+# Enable security modules for apache
+a2enmod headers ssl rewrite security2
+
+# Copy web server ssl certs
+rsync -arv $bkpdir/etc/ssl/ /etc/ssl
+rsync -arv $bkpdir/etc/letsencrypt/ /etc/letsencrypt
 
 # Create default self-signed ssl certificates for localhost
 
@@ -121,31 +160,33 @@ else
 
 fi
 
-systemctl restart apache2
+# restore /var/www/
+rsync -arv $bkpdir/var/www/ /var/www
 
 # install certbot and configure apache to use ssl
 apt install -y certbot python3-certbot-apache
 certbot --apache
 
+# Restart apache for configuration changes
+systemctl restart apache2
 
-
-#####################################################################
+###################################################
 #			Cockpit and related packages                #
-#####################################################################
+###################################################
 
 apt-get install -y cockpit cockpit-packagekit cockpit-storaged cockpit-pcp
 # add dirs and files for compatibility
 mkdir /usr/lib/x86_64-linux-gnu/udisks2
 mkdir /usr/lib/x86_64-linux-gnu/udisks2/modules
 # if problem with software updates - "vim /etc/netplan/00-installer-config.yaml" and add renderer: NetworkManager to end of file
-systemctl disable systemd-networkd
-netplan apply 
+#systemctl disable systemd-networkd
+#netplan apply 
 
-####################################################################
+##################################################
 #			MariaDB Install                            #
-#################################################################### 
+##################################################
 # install
-apt-get install -y mariadb-server
+apt-get install -y mariadb-server mariadb-backup
 
 # configure
 echo "Begin MariaDB configuration"
@@ -155,35 +196,51 @@ mysql_secure_installation
 
 mysql --user=root -p<<_EOF_
 GRANT ALL PRIVILEGES ON *.* TO '$dbuser'@'localhost' IDENTIFIED BY '$dbpasswd';
+FLUSH PRIVILEGES;
 _EOF_
 
 # Gunzip latest database backup sql.gz file for each database and restore the database
-# **** The following may no longer work due to developer changes made to Mariadb package ***
+# The following may no longer work due to developer changes made to Mariadb package
 
-echo "Listing of backed up databases:"
-echo "$(ls -I "*.log" $bkpdir/sql)"
-echo "-------------------------------------"
-echo "Enter name of databases separated by spaces to restore?"
-read -p 'databases: ' dbases
+# echo "Listing of backed up databases:"
+# echo "$(ls -I "*.log" $bkpdir/sql)"
+# echo "-------------------------------------"
+# echo "Enter name of databases separated by spaces to restore?"
+# read -p 'databases: ' dbases
 
-for dbase in $dbases
- do
-DIR="$bkpdir/sql/${dbase}"
-NEWEST=`ls -tr1d "${DIR}/"*.gz 2>/dev/null | tail -1`
-TODAY=$(date +"%a")
+# for dbase in $dbases
+#  do
+# DIR="$bkpdir/sql/${dbase}"
+# NEWEST=`ls -tr1d "${DIR}/"*.gz 2>/dev/null | tail -1`
+# TODAY=$(date +"%a")
 
-mysql --user=root -e "CREATE DATABASE $dbase DEFAULT CHARACTER SET utf8";
+# mysql --user=root -e "CREATE DATABASE $dbase DEFAULT CHARACTER SET utf8";
 
-  if [ ! -f "*.sql" ] ; then
-   gunzip -f ${NEWEST}
-   mysql --user=root "$dbase" < $DIR/$TODAY.sql
-else
-    echo "The .sql file already exists for this $dbase"
+#   if [ ! -f "*.sql" ] ; then
+#    gunzip -f ${NEWEST}
+#    mysql --user=root "$dbase" < $DIR/$TODAY.sql
+# else
+#     echo "The .sql file already exists for this $dbase"
 
-fi
-done
+# fi
+# done
 
-echo "Securing SQL installation"
+## Perform full restore of MariaDB      
+systemctl stop mariadb.service
+
+# Prepare MariaDB backup
+mariabackup --prepare  --target-dir=$bkpdir/sql/mariadb/fullbkp
+
+# Empty maria dir
+rm -rf /var/lib/mysql/
+
+# Restore backup of MariaDB
+mariabackup --copy-back --target-dir=$bkpdir/sql/mariadb/fullbkp
+
+# Restore ownership to files
+chown -R mysql:mysql /var/lib/mysql/
+
+systemctl start mariadb.service
 
 ############ PHPMYAdmin install - needs to be installed after database install
 apt-get install -y phpmyadmin
@@ -217,7 +274,7 @@ newaliases
 #curl -s https://packagecloud.io/install/repositories/netdata/netdata/script.rpm.sh | sudo bash
 #sudo apt-get install netdata
 
-
+apt-get install -y ufw
 ############ Create holes in firewall
 ufw allow imap
 ufw allow imaps
@@ -226,14 +283,14 @@ ufw allow pop3s
 ufw allow smtp
 ufw allow http
 ufw allow https
-ufw allow Samba
+ufw allow samba
 ufw allow ssh
 ufw allow 9090      #Cockpit
 #ufw allow 19999     #NetData
 ufw allow 2020      #SSHD
 ufw allow 587
 ufw allow 465
-ufw allow 5222      #Prosody IM server
+#ufw allow 5222      #Prosody IM server
 ufw reload
 ufw enable
 
@@ -242,11 +299,16 @@ ufw enable
 
 rsync -arv $bkpdir/home/$adminUser/ /home/$adminUser
 rsync -arv $bkpdir/etc/ssh/sshd_config /etc/ssh
-rsync -arv $bkpdir/etc/php.ini /etc
+#rsync -arv $bkpdir/etc/php.ini /etc
+rsync -arv $bkpdir/etc/php/$phpv/apache2/ /etc/php/$phpv/apache2
 rsync -arv $bkpdir/etc/goaccess/ /etc/goaccess
 rsync -arv $bkpdir/srv/ /srv
-rsync -arv $bkpdir/var/www/html/ /var/www/html
-rsync -arv $bkpdir/var/storage /var
+
+# Restore smartd.conf
+# run "udevadm info" from terminal to determin drive parameters to include in smartd.conf
+# example entry to replace /dev/sdb
+# /dev/disk/by-id/ata-ST320LT012-9WS14C_S0V0V2HA
+#rsync -arv $bkpdir/etc/smartd.conf /etc
 
 
 ############ Samba
@@ -273,35 +335,42 @@ crontab -l
 sleep 8
 
 ############ Install security packages
-# Fail2Ban Logwatch and Lynis
-apt-get install -y logwatch fail2ban lynis
-apt-get install -y tripwire
+# Fail2Ban, Logwatch, Clamav,  and Lynis
+apt-get install -y logwatch fail2ban clamav clamav-daemon python3-notify2 lynis
 # restore config files
 rsync -arv $bkpdir/etc/fail2ban/ /etc/fail2ban
 rsync -arv $bkpdir/etc/logwatch/ /etc/logwatch
+rsync -arv $bkpdir/etc/clamav/freshclam.conf /etc/clamav
 # create cache dir for logwatch
 mkdir /var/cache/logwatch
+# update clamav
+systemctl stop clamav-freshclam.service
+freshclam
 
-############# Tripwire
-apt-get install tripwire
-# backup original twpol.txt file and restore backuped copy
-mv /etc/tripwire/twpol.txt /etc/tripwire/twpol.txt.orig
-rsync -arv $bkpdir/etc/tripwire/twpol.txt
-# initialize the database
-tripwire --init
-# create file with filename/dir errors
-sh -c "tripwire --check | grep Filename > no-dir.txt"
-# use bash script to clean up twpol.txt and remove errors
-for f in $(grep "Filename:" no-directory.txt | cut -f2 -d:); do
-   sed -i "s|\($f\) |#\\1|g" /etc/tripwire/twpol.txt
-   done
-# regenerate and re-sign the tripwire policy
-twadmin -m P /etc/tripwire/twpol.txt
-# initialize again
-tripwire --init
-# verify configuration
-tripwire --check
-tripwire --test --email $adminEmail
+############# Install AIDE file integrity tool
+apt-get install -y aide
+rsync -arv $bkpdir/etc/aide/aide.conf /etc/aide
+aideinit
+## commands 
+# aide --check --config /etc/aide/aide.conf
+# aide --update --config /etc/aide/aide.conf
+# cp /var/lib/aide/aide.db{.new,}
+
+
+############# Install AuditD 
+apt-get install -y auditd
+rsync -arv $bkpdir/etc/audit/audit.rules /etc/audit
+rsync -arv $bkpdir/etc/audit/rules.d/ /etc/audit/rules.d
+service auditd start
+systemctl enable auditd
+# Restore aide-update.sh file to /usr/sbin for bash use
+rsync -arv $bkpdir/home/zach/repo/scripts/aide-update.sh /usr/sbin
+
+############# Start and enable services
+systemctl enable --now cockpit.socket
+systemctl enable clamav-freshclam.service
+systemctl start clamav-freshclam.service
+systemctl enable auditd.service
 
 ############# RKHunter installation and update
 apt-get install -y rkhunter
@@ -311,13 +380,11 @@ rsync -arv $bkpdir/etc/default/rkhunter /etc/defalut
 # initialize rkhunter
 rkhunter --propupd
 
-
+echo "################################################"
 echo "All Finished!  The computer will reboot in 10 seconds."
-sleep 10
+echo "Restart computer for changes to take affect."
+echo "################################################"
 
-# reboot computer
-reboot
-
-
+fi
 
 
