@@ -101,13 +101,6 @@ apt install -y zip unzip git composer
 #systemctl enable prosody
 #systemctl start prosody
 
-# User and group creation for /html dirs write access
-groupadd webdev  # needed for access to specific /html dirs shared over sftp
-useradd -M joshnij
-usermod -a -G webdev joshnij
-usermod -a -G webdev zach
-
-
 #######################################################################
 #			Apache web server and security package        #
 #######################################################################
