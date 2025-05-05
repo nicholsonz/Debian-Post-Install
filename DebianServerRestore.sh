@@ -5,17 +5,19 @@
 ##########################################################
 
 # Set variables
-srvrname=				# FQDN for local server machine
+srvrname=				                  # FQDN for local server machine
+srvrname2=${srvrname//./-}        # replace dots (.) or better filename presentation
 dbuser=
 dbpasswd=
 adminUser=
 adminEmail=
-smbuser=				# samba user
-smbgrp=					# samba group
+smbuser=				                  # samba user
+smbgrp=					                  # samba group
 bkpdir=/mnt/backup/$srvrname    	# mount point of backup dir
+websrvr=var/www                   # web server root dir
 bkpdev=/dev/sdb                 	# location of backup drive with backup files/dirs
 ip=
-uuid=      	                	#find uuid of backup device for fstab entry: "sudo blkid /dev/sd?"
+uuid=      	                	    # find uuid of backup device for fstab entry: "sudo blkid /dev/sd?"
 phpv=8.2  	
 
 ###########################################################
@@ -25,16 +27,10 @@ echo "List any packages to upgrade before running installation"
 echo "#######################################################"
 apt update
 apt list --upgradable
+echo "Upgrading system"
+sleep 5
+apt upgrade -y
 echo "#######################################################"
-echo "If any packages are listed above abort the install, upgrade, and then reboot before continuing!"
-read -r -p "Continue with the restoration process? [Y / N] " response
-if [[ "$response" =~ ^([Nn][Oo]|[Nn])$ ]] 
- then exit 1
- else
-
-echo "#######################################################"
-echo "Clean any lingering packages"
-apt autoremove
 
 ############ Set time and time zone
 dpkg-reconfigure tzdata
@@ -46,8 +42,8 @@ echo "#####################"
 timedatectl
 echo "#####################"
 echo ""
-echo "If timezone is incorrect set it manually example for central locations - timedatectl set-timezone America/Chicago"
-sleep 7 
+echo "If timezone is incorrect set it manually - timedatectl set-timezone America/Chicago"
+sleep 10 
 
 ############ Make backup directory, create fstab entry and mount the backup drive
 mkdir /mnt/backup
@@ -107,8 +103,9 @@ apt install -y zip unzip git composer
 #
 # install
 apt-get install -y apache2 openssl libapache2-mod-php
-# restore and configure
-openssl req -x509 -nodes -days 3650 -newkey rsa:2048 -keyout /etc/ssl/private/$srvrname.key -out /etc/ssl/certs/$srvrname.crt
+
+# Restore and configure Apache
+#
 rsync -arv $bkpdir/etc/apache2/apache2.conf /etc/apache2
 #rsync -arv $bkpdir/etc/apache2/modsecurity-crs /etc/apache2
 rsync -arv $bkpdir/etc/apache2/sites-available/ /etc/apache2/sites-available
@@ -139,22 +136,22 @@ rsync -arv $bkpdir/etc/letsencrypt/ /etc/letsencrypt
 
 # Create default self-signed ssl certificates for localhost
 
-if [ ! -f /etc/ssl/private/$srvrname.key ]; then
+if [ ! -f /etc/ssl/private/$srvrname2.key ]; then
 
-  openssl genrsa -des3 -out /etc/ssl/private/$srvrname.key 2048
-  openssl rsa -in /etc/ssl/private/$srvrname.key -out /etc/ssl/private/$srvrname.key.insecure
-  mv /etc/ssl/private/$srvrname.key /etc/ssl/private/$srvrname.key.secure
-  mv /etc/ssl/private/$srvrname.key.insecure /etc/ssl/private/$srvrname.key
-  openssl req -new -key /etc/ssl/private/$srvrname.key -out /etc/ssl/certs/$srvrname.csr
-  openssl x509 -req -days 3650 -in /etc/ssl/certs/$srvrname.csr -signkey /etc/ssl/private/$srvrname.key -out /etc/ssl/certs/$srvrname.crt
+  openssl genrsa -des3 -out /etc/ssl/private/$srvrname2.key 2048
+  openssl rsa -in /etc/ssl/private/$srvrname2.key -out /etc/ssl/private/$srvrname2.key.insecure
+  mv /etc/ssl/private/$srvrname2.key /etc/ssl/private/$srvrname2.key.secure
+  mv /etc/ssl/private/$srvrname2.key.insecure /etc/ssl/private/$srvrname2.key
+  openssl req -new -key /etc/ssl/private/$srvrname2.key -out /etc/ssl/certs/$srvrname2.csr
+  openssl x509 -req -days 3650 -in /etc/ssl/certs/$srvrname2.csr -signkey /etc/ssl/private/$srvrname2.key -out /etc/ssl/certs/$srvrname2.crt
 
 else
     echo "Key pair already exists."
 
 fi
 
-# restore /var/www/
-rsync -arv $bkpdir/var/www/ /var/www
+# restore /$websrvr/
+rsync -arv $bkpdir/$websrvr/ /$websrvr
 
 # install certbot and configure apache to use ssl
 apt install -y certbot python3-certbot-apache
@@ -191,32 +188,6 @@ mysql --user=root -p<<_EOF_
 GRANT ALL PRIVILEGES ON *.* TO '$dbuser'@'localhost' IDENTIFIED BY '$dbpasswd';
 FLUSH PRIVILEGES;
 _EOF_
-
-# Gunzip latest database backup sql.gz file for each database and restore the database
-# The following may no longer work due to developer changes made to Mariadb package
-
-# echo "Listing of backed up databases:"
-# echo "$(ls -I "*.log" $bkpdir/sql)"
-# echo "-------------------------------------"
-# echo "Enter name of databases separated by spaces to restore?"
-# read -p 'databases: ' dbases
-
-# for dbase in $dbases
-#  do
-# DIR="$bkpdir/sql/${dbase}"
-# NEWEST=`ls -tr1d "${DIR}/"*.gz 2>/dev/null | tail -1`
-# TODAY=$(date +"%a")
-
-# mysql --user=root -e "CREATE DATABASE $dbase DEFAULT CHARACTER SET utf8";
-
-#   if [ ! -f "*.sql" ] ; then
-#    gunzip -f ${NEWEST}
-#    mysql --user=root "$dbase" < $DIR/$TODAY.sql
-# else
-#     echo "The .sql file already exists for this $dbase"
-
-# fi
-# done
 
 ## Perform full restore of MariaDB      
 systemctl stop mariadb.service
