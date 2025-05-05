@@ -71,18 +71,18 @@ hostnamectl set-hostname $srvrname
 echo "$ip   $srvrname" >>/etc/hosts
 
 # Restore home dir for admin user
-rsync -arv $bkpdir/home/$admin/ /home/$admin
+rsync -arvp $bkpdir/home/$admin/ /home/$admin
 
 ## setup systemd-timesyncd for system time synchoronization
 apt install systemd-timesyncd
-rsync -arv $bkpdir/etc/systemd/timesyncd.conf /etc/systemd/
+rsync -arvp $bkpdir/etc/systemd/timesyncd.conf /etc/systemd/
 
 
 ## Extra packages
 apt-get install -y lnav rsyslog lm-sensors wget whois bash-completion smartmontools haveged goaccess tuned colorized-logs
 
 # restore goaccess files
-rsync -arv $bkpdir/etc/goaccess/ /etc/goaccess
+rsync -arvp $bkpdir/etc/goaccess/ /etc/goaccess
 
 ## PHP install
 apt install -y php$phpv php$phpv-bz2 php$phpv-cli php$phpv-common php$phpv-curl php$phpv-gd php$phpv-imap php$phpv-intl php$phpv-ldap php$phpv-mbstring php$phpv-mysql php$phpv-imagick php$phpv-xml php$phpv-zip php$phpv-soap php$phpv-readline php$phpv-opcache
@@ -93,7 +93,7 @@ apt install -y zip unzip git composer
 #extrepo enable prosody
 #apt update
 #apt install -y prosody
-#rsync -arv $bkpdir/etc/prosody/ /etc/prosody
+#rsync -arvp $bkpdir/etc/prosody/ /etc/prosody
 #systemctl enable prosody
 #systemctl start prosody
 
@@ -106,10 +106,10 @@ apt-get install -y apache2 openssl libapache2-mod-php
 
 # Restore and configure Apache
 #
-rsync -arv $bkpdir/etc/apache2/apache2.conf /etc/apache2
-#rsync -arv $bkpdir/etc/apache2/modsecurity-crs /etc/apache2
-rsync -arv $bkpdir/etc/apache2/sites-available/ /etc/apache2/sites-available
-rsync -arv $bkpdir/etc/apache2/conf-available/ /etc/apache2/conf-available
+rsync -arvp $bkpdir/etc/apache2/apache2.conf /etc/apache2
+#rsync -arvp $bkpdir/etc/apache2/modsecurity-crs /etc/apache2
+rsync -arvp $bkpdir/etc/apache2/sites-available/ /etc/apache2/sites-available
+rsync -arvp $bkpdir/etc/apache2/conf-available/ /etc/apache2/conf-available
 # enable all available sites
 a2ensite *
 # install security packages for apache2
@@ -124,15 +124,15 @@ a2dismod deflate
 apt install libapache2-mod-security2
 
 # restore configuration files for mod_security
-rsync -arv $bkpdir/etc/modsecurity/modsecurity.conf /etc/modsecurity
-rsync -arv $bkpdir/etc/modsecurity/crs/crs-setup.conf /etc/modsecurity/crs
+rsync -arvp $bkpdir/etc/modsecurity/modsecurity.conf /etc/modsecurity
+rsync -arvp $bkpdir/etc/modsecurity/crs/crs-setup.conf /etc/modsecurity/crs
 
 # Enable security modules for apache
 a2enmod headers ssl rewrite security2
 
 # Copy web server ssl certs
-rsync -arv $bkpdir/etc/ssl/ /etc/ssl
-rsync -arv $bkpdir/etc/letsencrypt/ /etc/letsencrypt
+rsync -arvp $bkpdir/etc/ssl/ /etc/ssl
+rsync -arvp $bkpdir/etc/letsencrypt/ /etc/letsencrypt
 
 # Create default self-signed ssl certificates for localhost
 
@@ -151,7 +151,7 @@ else
 fi
 
 # restore /$websrvr/
-rsync -arv $bkpdir/$websrvr/ /$websrvr
+rsync -arvp $bkpdir/$websrvr/ /$websrvr
 
 # install certbot and configure apache to use ssl
 apt install -y certbot python3-certbot-apache
@@ -208,21 +208,21 @@ systemctl start mariadb.service
 
 ############ PHPMYAdmin install - needs to be installed after database install
 apt-get install -y phpmyadmin
-rsync -arv $bkpdir/etc/phpmyadmin/apache.conf /etc/phpmyadmin
+rsync -arvp $bkpdir/etc/phpmyadmin/apache.conf /etc/phpmyadmin
 
 
 ############ Postfix and Dovecot
 apt-get install -y postfix postfix-mysql dovecot-lmtpd dovecot-mysql dovecot-core dovecot-imapd dovecot-pop3d
 cp /etc/postfix/main.cf /etc/postfix/main.cf.bkp
-rsync -arv $bkpdir/etc/postfix/main.cf /etc/postfix
+rsync -arvp $bkpdir/etc/postfix/main.cf /etc/postfix
 cp /etc/postfix/master.cf /etc/postfix/master.cf.bkp
-rsync -arv $bkpdir/etc/postfix/master.cf /etc/postfix
-rsync -arv $bkpdir/etc/postfix/sql /etc/postfix
-rsync -arv $bkpdir/etc/dovecot/dovecot.conf /etc/dovecot
+rsync -arvp $bkpdir/etc/postfix/master.cf /etc/postfix
+rsync -arvp $bkpdir/etc/postfix/sql /etc/postfix
+rsync -arvp $bkpdir/etc/dovecot/dovecot.conf /etc/dovecot
 cp /etc/dovecot/dovecot-sql.conf.ext /etc/dovecot/dovecot-sql.conf.ext.bak
-rsync -arv $bkpdir/etc/dovecot/dovecot-sql.conf.ext /etc/dovecot
-rsync -arv $bkpdir/etc/dovecot/conf.d/ /etc/dovecot/conf.d
-rsync -arv $bkpdir/etc/mailname /etc
+rsync -arvp $bkpdir/etc/dovecot/dovecot-sql.conf.ext /etc/dovecot
+rsync -arvp $bkpdir/etc/dovecot/conf.d/ /etc/dovecot/conf.d
+rsync -arvp $bkpdir/etc/mailname /etc
 # add virtual mailbox dir and user
 mkdir /var/vmail
 groupadd -g 6000 vmail
@@ -261,18 +261,18 @@ ufw enable
 
 ############ miscellaneous file restoration
 
-rsync -arv $bkpdir/home/$adminUser/ /home/$adminUser
-rsync -arv $bkpdir/etc/ssh/sshd_config /etc/ssh
-#rsync -arv $bkpdir/etc/php.ini /etc
-rsync -arv $bkpdir/etc/php/$phpv/apache2/ /etc/php/$phpv/apache2
-rsync -arv $bkpdir/etc/goaccess/ /etc/goaccess
-rsync -arv $bkpdir/srv/ /srv
+rsync -arvp $bkpdir/home/$adminUser/ /home/$adminUser
+rsync -arvp $bkpdir/etc/ssh/sshd_config /etc/ssh
+#rsync -arvp $bkpdir/etc/php.ini /etc
+rsync -arvp $bkpdir/etc/php/$phpv/apache2/ /etc/php/$phpv/apache2
+rsync -arvp $bkpdir/etc/goaccess/ /etc/goaccess
+rsync -arvp $bkpdir/srv/ /srv
 
 # Restore smartd.conf
 # run "udevadm info" from terminal to determin drive parameters to include in smartd.conf
 # example entry to replace /dev/sdb
 # /dev/disk/by-id/ata-ST320LT012-9WS14C_S0V0V2HA
-#rsync -arv $bkpdir/etc/smartd.conf /etc
+#rsync -arvp $bkpdir/etc/smartd.conf /etc
 
 
 ############ Samba
@@ -282,13 +282,13 @@ passwd $smbuser
 smbpasswd -a $smbuser
 groupadd $smbgrp
 usermod -aG $smbgrp $smbuser
-rsync -arv $bkpdir/etc/samba/smb.conf /etc/samba
+rsync -arvp $bkpdir/etc/samba/smb.conf /etc/samba
 chmod -R 770 /srv/samba
 chown -R root:$smbgrp /srv/samba
 
 ############# Root Crontab 
 # restore custom cron jobs
-rsync -arv $bkpdir/etc/cron.custom /etc
+rsync -arvp $bkpdir/etc/cron.custom /etc
 # restore crontab for root
 crontab /home/$adminUser/repo/crontab.bak
 # verify crontab entries
@@ -302,9 +302,9 @@ sleep 8
 # Fail2Ban, Logwatch, Clamav,  and Lynis
 apt-get install -y logwatch fail2ban clamav clamav-daemon python3-notify2 lynis
 # restore config files
-rsync -arv $bkpdir/etc/fail2ban/ /etc/fail2ban
-rsync -arv $bkpdir/etc/logwatch/ /etc/logwatch
-rsync -arv $bkpdir/etc/clamav/freshclam.conf /etc/clamav
+rsync -arvp $bkpdir/etc/fail2ban/ /etc/fail2ban
+rsync -arvp $bkpdir/etc/logwatch/ /etc/logwatch
+rsync -arvp $bkpdir/etc/clamav/freshclam.conf /etc/clamav
 # create cache dir for logwatch
 mkdir /var/cache/logwatch
 # update clamav
@@ -313,7 +313,7 @@ freshclam
 
 ############# Install AIDE file integrity tool
 apt-get install -y aide
-rsync -arv $bkpdir/etc/aide/aide.conf /etc/aide
+rsync -arvp $bkpdir/etc/aide/aide.conf /etc/aide
 aideinit
 ## commands 
 # aide --check --config /etc/aide/aide.conf
@@ -323,12 +323,12 @@ aideinit
 
 ############# Install AuditD 
 apt-get install -y auditd
-rsync -arv $bkpdir/etc/audit/audit.rules /etc/audit
-rsync -arv $bkpdir/etc/audit/rules.d/ /etc/audit/rules.d
+rsync -arvp $bkpdir/etc/audit/audit.rules /etc/audit
+rsync -arvp $bkpdir/etc/audit/rules.d/ /etc/audit/rules.d
 service auditd start
 systemctl enable auditd
 # Restore aide-update.sh file to /usr/sbin for bash use
-rsync -arv $bkpdir/home/zach/repo/scripts/aide-update.sh /usr/sbin
+rsync -arvp $bkpdir/home/zach/repo/scripts/aide-update.sh /usr/sbin
 
 ############# Start and enable services
 systemctl enable --now cockpit.socket
@@ -339,8 +339,8 @@ systemctl enable auditd.service
 ############# RKHunter installation and update
 apt-get install -y rkhunter
 # restore configuration files
-rsync -arv $bkpdir/etc/rkhunter.conf /etc
-rsync -arv $bkpdir/etc/default/rkhunter /etc/defalut
+rsync -arvp $bkpdir/etc/rkhunter.conf /etc
+rsync -arvp $bkpdir/etc/default/rkhunter /etc/defalut
 # initialize rkhunter
 rkhunter --propupd
 
