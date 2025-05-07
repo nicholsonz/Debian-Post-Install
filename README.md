@@ -1,0 +1,1 @@
+A full system restore of Debian server after performing the base system install. This script is used with the [`Incremental-Backup`](https://github.com/nicholsonz/Incremental-Backup) script for source file restoration. 
