@@ -322,11 +322,12 @@ aideinit
 
 
 ############# Install AuditD 
-apt-get install -y auditd
+apt-get install -y auditd audispd-plugins
 rsync -arvp $bkpdir/etc/audit/audit.rules /etc/audit
 rsync -arvp $bkpdir/etc/audit/rules.d/ /etc/audit/rules.d
 service auditd start
 systemctl enable auditd
+
 # Restore aide-update.sh file to /usr/sbin for bash use
 rsync -arvp $bkpdir/home/zach/repo/scripts/aide-update.sh /usr/sbin
 
