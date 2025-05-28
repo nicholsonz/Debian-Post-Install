@@ -13,7 +13,8 @@ adminUser=
 adminEmail=
 smbuser=				                  # samba user
 smbgrp=					                  # samba group
-bkpdir=/mnt/backup/$srvrname    	# mount point of backup dir
+mntpnt=/mnt/backup                # mount point
+bkpdir=/mnt/backup/$srvrname    	# backup dir
 websrvr=var/www                   # web server root dir
 bkpdev=/dev/sdb                 	# location of backup drive with backup files/dirs
 ip=
@@ -46,7 +47,7 @@ echo "If timezone is incorrect set it manually - timedatectl set-timezone Americ
 sleep 10 
 
 ############ Make backup directory, create fstab entry and mount the backup drive
-mkdir /mnt/backup
+mkdir $mntpnt
 #echo UUID=$uuid  /mnt/backup  auto  defaults  0 0 >>/etc/fstab
 
 echo "Connect backup media at this time..."
@@ -59,8 +60,7 @@ else
   exit 1;
 fi
 
-MNTPNT='/mnt/backup'
-if [ ! mountpoint -q ${MNTPNT}/ ]; then
+if [ ! mountpoint -q ${mntpnt}/ ]; then
 	echo "Drive not mounted! Cannot continue without backup volume mounted!"
 	exit 1
 fi
@@ -110,22 +110,23 @@ rsync -arvp $bkpdir/etc/apache2/apache2.conf /etc/apache2
 #rsync -arvp $bkpdir/etc/apache2/modsecurity-crs /etc/apache2
 rsync -arvp $bkpdir/etc/apache2/sites-available/ /etc/apache2/sites-available
 rsync -arvp $bkpdir/etc/apache2/conf-available/ /etc/apache2/conf-available
+
 # enable all available sites
 a2ensite *
-# install security packages for apache2
+
+## install security packages for apache2
+# Install mod_security
+apt install libapache2-mod-security2
 
 # DOS protection redundant and too sensitive.  Already included in firewall
 #apt install -y libapache2-mod-evasive
 
-# Disable potentially insecure modules for Apache2
-a2dismod deflate
-
-# Install mod_security
-apt install libapache2-mod-security2
-
 # restore configuration files for mod_security
 rsync -arvp $bkpdir/etc/modsecurity/modsecurity.conf /etc/modsecurity
 rsync -arvp $bkpdir/etc/modsecurity/crs/crs-setup.conf /etc/modsecurity/crs
+
+# Disable potentially insecure modules for Apache2
+a2dismod deflate
 
 # Enable security modules for apache
 a2enmod headers ssl rewrite security2
@@ -182,6 +183,7 @@ apt-get install -y mariadb-server mariadb-backup
 echo "Begin MariaDB configuration"
 echo
 
+# secure mariadb installation
 mysql_secure_installation
 
 mysql --user=root -p<<_EOF_
@@ -349,7 +351,6 @@ echo "################################################"
 echo "All Finished!  The computer will reboot in 10 seconds."
 echo "Restart computer for changes to take affect."
 echo "################################################"
-
-fi
+  
 
 
