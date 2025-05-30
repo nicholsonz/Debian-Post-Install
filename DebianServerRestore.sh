@@ -51,8 +51,8 @@ mkdir $mntpnt
 #echo UUID=$uuid  /mnt/backup  auto  defaults  0 0 >>/etc/fstab
 
 echo "Connect backup media at this time..."
-read -p "Backup media connected (y/n)?" CONT
-if [ "$CONT" = "y" ]; then
+read -p "Backup media connected (y/n)?" yesno
+if [[ "$yesno" =~ ^([Yy](es|ES|eah)?)$ ]]; then
   echo "Great! Let's continue";
   mount /mnt/backup
 else
