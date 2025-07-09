@@ -181,7 +181,7 @@ apt-get install -y mariadb-server mariadb-backup
 
 # configure
 echo "Begin MariaDB configuration"
-echo
+echo ""
 
 # secure mariadb installation
 mysql_secure_installation
@@ -294,9 +294,9 @@ rsync -arvp $bkpdir/etc/cron.custom /etc
 # restore crontab for root
 crontab /home/$adminUser/repo/crontab.bak
 # verify crontab entries
-echo 
+echo ""
 echo "###############################"
-echo
+echo ""
 crontab -l
 sleep 8
 
