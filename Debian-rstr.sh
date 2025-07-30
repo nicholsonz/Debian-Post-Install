@@ -97,9 +97,9 @@ apt install -y zip unzip git composer
 #systemctl enable prosody
 #systemctl start prosody
 
-#######################################################################
-#			Apache web server and security package        #
-#######################################################################
+##################################################
+#			              Apache                       #
+##################################################
 #
 # install
 apt-get install -y apache2 openssl libapache2-mod-php
@@ -174,7 +174,7 @@ mkdir /usr/lib/x86_64-linux-gnu/udisks2/modules
 #netplan apply 
 
 ##################################################
-#			MariaDB Install                            #
+#			          MariaDB Install                  #
 ##################################################
 # install
 apt-get install -y mariadb-server mariadb-backup
@@ -206,14 +206,17 @@ mariabackup --copy-back --target-dir=$bkpdir/sql/mariadb/fullbkp
 # Restore ownership to files
 chown -R mysql:mysql /var/lib/mysql/
 
+# Restore backup of important configuration files
+rsync -arvp $bkpdir/etc/mysql/ /etc/mysql
 systemctl start mariadb.service
 
 ############ PHPMYAdmin install - needs to be installed after database install
 apt-get install -y phpmyadmin
 rsync -arvp $bkpdir/etc/phpmyadmin/apache.conf /etc/phpmyadmin
 
-
-############ Postfix and Dovecot
+##################################################
+##           Postfix and Dovecot                ##
+##################################################
 apt-get install -y postfix postfix-mysql dovecot-lmtpd dovecot-mysql dovecot-core dovecot-imapd dovecot-pop3d
 cp /etc/postfix/main.cf /etc/postfix/main.cf.bkp
 rsync -arvp $bkpdir/etc/postfix/main.cf /etc/postfix
@@ -277,7 +280,9 @@ rsync -arvp $bkpdir/srv/ /srv
 #rsync -arvp $bkpdir/etc/smartd.conf /etc
 
 
-############ Samba
+##################################################
+##                   Samba                      ##
+##################################################
 apt-get install -y samba
 useradd -M -s /sbin/nologin $smbuser
 passwd $smbuser
@@ -323,7 +328,9 @@ aideinit
 # cp /var/lib/aide/aide.db{.new,}
 
 
-############# Install AuditD 
+##################################################
+##                   AuditD                     ##
+##################################################
 apt-get install -y auditd audispd-plugins
 rsync -arvp $bkpdir/etc/audit/audit.rules /etc/audit
 rsync -arvp $bkpdir/etc/audit/rules.d/ /etc/audit/rules.d
