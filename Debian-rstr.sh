@@ -70,7 +70,8 @@ hostnamectl set-hostname $srvrname
 
 echo "$ip   $srvrname" >>/etc/hosts
 
-# Restore home dir for admin user
+# First install rsync package and then restore home dir for admin user
+apt-get install rsync
 rsync -arvp $bkpdir/home/$admin/ /home/$admin
 
 ## setup systemd-timesyncd for system time synchoronization
@@ -123,7 +124,7 @@ apt install libapache2-mod-security2
 
 # restore configuration files for mod_security
 rsync -arvp $bkpdir/etc/modsecurity/modsecurity.conf /etc/modsecurity
-rsync -arvp $bkpdir/etc/modsecurity/crs/crs-setup.conf /etc/modsecurity/crs
+rsync -arvp $bkpdir/etc/modsecurity/crs /etc/modsecurity/crs
 
 # Disable potentially insecure modules for Apache2
 a2dismod deflate
@@ -133,7 +134,7 @@ a2enmod headers ssl rewrite security2
 
 # Copy web server ssl certs
 rsync -arvp $bkpdir/etc/ssl/ /etc/ssl
-rsync -arvp $bkpdir/etc/letsencrypt/ /etc/letsencrypt
+rsync -arvp $bkpdir/etc/letsencrypt /etc
 
 # Create default self-signed ssl certificates for localhost
 
@@ -166,10 +167,10 @@ systemctl restart apache2
 ###################################################
 
 apt-get install -y cockpit cockpit-packagekit cockpit-storaged cockpit-pcp
-# add dirs and files for compatibility
-mkdir /usr/lib/x86_64-linux-gnu/udisks2
-mkdir /usr/lib/x86_64-linux-gnu/udisks2/modules
-# if problem with software updates - "vim /etc/netplan/00-installer-config.yaml" and add renderer: NetworkManager to end of file
+## add dirs and files for compatibility
+# mkdir /usr/lib/x86_64-linux-gnu/udisks2
+# mkdir /usr/lib/x86_64-linux-gnu/udisks2/modules
+## if problem with software updates - "vim /etc/netplan/00-installer-config.yaml" and add renderer: NetworkManager to end of file
 #systemctl disable systemd-networkd
 #netplan apply 
 
@@ -183,9 +184,6 @@ apt-get install -y mariadb-server mariadb-backup
 echo "Begin MariaDB configuration"
 echo ""
 
-# secure mariadb installation
-mysql_secure_installation
-
 mysql --user=root -p<<_EOF_
 GRANT ALL PRIVILEGES ON *.* TO '$dbuser'@'localhost' IDENTIFIED BY '$dbpasswd';
 FLUSH PRIVILEGES;
@@ -195,13 +193,13 @@ _EOF_
 systemctl stop mariadb.service
 
 # Prepare MariaDB backup
-mariabackup --prepare  --target-dir=$bkpdir/sql/mariadb/fullbkp
+mariadb-backup --prepare  --target-dir=$bkpdir/sql/mariadb/fullbkp
 
 # Empty maria dir
 rm -rf /var/lib/mysql/
 
 # Restore backup of MariaDB
-mariabackup --copy-back --target-dir=$bkpdir/sql/mariadb/fullbkp
+mariadb-backup --copy-back --target-dir=$bkpdir/sql/mariadb/fullbkp
 
 # Restore ownership to files
 chown -R mysql:mysql /var/lib/mysql/
