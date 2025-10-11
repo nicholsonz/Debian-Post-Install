@@ -6,7 +6,7 @@
 
 # Set variables
 srvrname=				                  # FQDN for local server machine
-srvrname2=${srvrname//./-}        # replace dots (.) or better filename presentation
+srvrname2=${srvrname//./-}        # replace dots (.) for better filename presentation
 dbuser=
 dbpasswd=
 adminUser=
