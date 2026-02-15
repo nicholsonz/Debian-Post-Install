@@ -127,7 +127,7 @@ rsync -arvp $bkpdir/etc/modsecurity/modsecurity.conf /etc/modsecurity
 rsync -arvp $bkpdir/etc/modsecurity/crs /etc/modsecurity/crs
 
 # Disable potentially insecure modules for Apache2
-a2dismod deflate
+#a2dismod deflate
 
 # Enable security modules for apache
 a2enmod headers ssl rewrite security2
@@ -227,10 +227,10 @@ rsync -arvp $bkpdir/etc/dovecot/dovecot-sql.conf.ext /etc/dovecot
 rsync -arvp $bkpdir/etc/dovecot/conf.d/ /etc/dovecot/conf.d
 rsync -arvp $bkpdir/etc/mailname /etc
 # add virtual mailbox dir and user
-mkdir /var/vmail
-groupadd -g 6000 vmail
-useradd -r -g vmail -u 6000 vmail -d /var/vmail -c "virtual mail user"
-chown -R vmail:vmail /var/vmail
+mkdir /srv/mail
+groupadd -g 5000 vmail
+useradd -r -g vmail -u 5000 vmail -d /srv/mail -c "virtual mail user"
+chown -R vmail:vmail /srv/mail
 
 # Add alias for root and update alias database 
 echo "root:      $adminUser" >>/etc/aliases
