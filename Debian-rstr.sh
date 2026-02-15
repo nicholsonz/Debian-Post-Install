@@ -314,7 +314,7 @@ sleep 8
 
 ############ Install security packages
 # Fail2Ban, Logwatch, Clamav,  and Lynis
-apt-get install -y logwatch fail2ban clamav clamav-daemon python3-notify2 lynis
+apt-get install -y logwatch fail2ban clamav clamav-daemon python3-notify2 lynis cryptsetup
 # restore config files
 rsync -arvp $bkpdir/etc/fail2ban/ /etc/fail2ban
 rsync -arvp $bkpdir/etc/logwatch/ /etc/logwatch
