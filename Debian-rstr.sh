@@ -19,7 +19,7 @@ websrvr=var/www                   # web server root dir
 bkpdev=/dev/sdb                 	# location of backup drive with backup files/dirs
 ip=
 uuid=      	                	    # find uuid of backup device for fstab entry: "sudo blkid /dev/sd?"
-phpv=8.2  	
+phpv=8.4
 
 ###########################################################
 
