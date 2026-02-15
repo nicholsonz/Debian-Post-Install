@@ -278,6 +278,15 @@ rsync -arvp $bkpdir/srv/ /srv
 #rsync -arvp $bkpdir/etc/smartd.conf /etc
 
 
+############ Setup Git and repositories
+apt-get install -y git
+adduser git
+chsh git -s /usr/bin/git-shell
+# restore shell config
+rsync -arv $bkpdir/etc/shells /etc/
+# restore git ssh keys and repos
+rsync -arv $bkpdir/home/git/ /home/git
+
 ##################################################
 ##                   Samba                      ##
 ##################################################
