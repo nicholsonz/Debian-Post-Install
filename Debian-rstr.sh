@@ -236,6 +236,18 @@ chown -R vmail:vmail /srv/mail
 echo "root:      $adminUser" >>/etc/aliases
 newaliases
 
+# Install OpenDKIM
+apt-get install -y opendkim opendkim-tools
+# Actual command to run key gen for opendkim - replace yourdomain.org with your server email domain and the year with current
+#sudo -u opendkim opendkim-genkey -D /etc/dkimkeys -d yourdomain.org -s 2021
+#
+# Restore OpenDKIM files
+rsync -arvp $bkpdir/etc/opendkim.conf /etc
+rsync -arvp $bkpdir/etc/opendkim/ /etc/opendkim
+rsync -arvp $bkpdir/etc/dkimkeys /etc
+
+systemctl enable opendkim
+systemctl restart opendkim
 
 ############ Netdata for monitoring
 #curl -s https://packagecloud.io/install/repositories/netdata/netdata/script.rpm.sh | sudo bash
