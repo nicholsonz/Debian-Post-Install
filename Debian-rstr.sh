@@ -253,7 +253,9 @@ systemctl restart opendkim
 #curl -s https://packagecloud.io/install/repositories/netdata/netdata/script.rpm.sh | sudo bash
 #sudo apt-get install netdata
 
+# Install UFW 
 apt-get install -y ufw
+
 ############ Create holes in firewall
 ufw allow imap
 ufw allow imaps
