@@ -132,7 +132,7 @@ rsync -arvp $bkpdir/etc/modsecurity/crs /etc/modsecurity/crs
 # Enable security modules for apache
 a2enmod headers ssl rewrite security2
 
-# Copy web server ssl certs
+# Copy web/mail server ssl certs
 rsync -arvp $bkpdir/etc/ssl/ /etc/ssl
 rsync -arvp $bkpdir/etc/letsencrypt /etc
 
