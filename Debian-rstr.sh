@@ -226,6 +226,7 @@ cp /etc/dovecot/dovecot-sql.conf.ext /etc/dovecot/dovecot-sql.conf.ext.bak
 rsync -arvp $bkpdir/etc/dovecot/dovecot-sql.conf.ext /etc/dovecot
 rsync -arvp $bkpdir/etc/dovecot/conf.d/ /etc/dovecot/conf.d
 rsync -arvp $bkpdir/etc/mailname /etc
+
 # add virtual mailbox dir and user
 mkdir /srv/mail
 groupadd -g 5000 vmail
@@ -284,6 +285,9 @@ rsync -arvp $bkpdir/etc/ssh/sshd_config /etc/ssh
 rsync -arvp $bkpdir/etc/php/$phpv/apache2/ /etc/php/$phpv/apache2
 rsync -arvp $bkpdir/etc/goaccess/ /etc/goaccess
 rsync -arvp $bkpdir/srv/ /srv
+
+# Logrotate for specific apps
+rsync -arvp $bkpdir/etc/logrotate.d/ /etc/logrotate.d
 
 # Restore smartd.conf
 # run "udevadm info" from terminal to determin drive parameters to include in smartd.conf
