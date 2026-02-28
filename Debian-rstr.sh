@@ -168,8 +168,8 @@ systemctl restart apache2
 
 apt-get install -y cockpit cockpit-packagekit cockpit-storaged cockpit-pcp
 ## add dirs and files for compatibility
-# mkdir /usr/lib/x86_64-linux-gnu/udisks2
-# mkdir /usr/lib/x86_64-linux-gnu/udisks2/modules
+mkdir /usr/lib/x86_64-linux-gnu/udisks2
+mkdir /usr/lib/x86_64-linux-gnu/udisks2/modules
 ## if problem with software updates - "vim /etc/netplan/00-installer-config.yaml" and add renderer: NetworkManager to end of file
 #systemctl disable systemd-networkd
 #netplan apply 
