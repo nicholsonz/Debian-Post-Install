@@ -166,7 +166,7 @@ systemctl restart apache2
 #			Cockpit and related packages                #
 ###################################################
 
-apt-get install -y cockpit cockpit-packagekit cockpit-storaged cockpit-pcp
+apt-get install -y cockpit cockpit-packagekit cockpit-storaged cockpit-pcp udisks2 udisks2-lvm2 udisks2-btrfs open-isci
 ## add dirs and files for compatibility
 mkdir /usr/lib/x86_64-linux-gnu/udisks2
 mkdir /usr/lib/x86_64-linux-gnu/udisks2/modules
