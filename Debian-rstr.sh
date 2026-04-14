@@ -12,7 +12,8 @@ dbpasswd=
 adminUser=
 adminEmail=
 smbuser=				                  # samba user
-smbgrp=					                  # samba group
+smbgrp=	                          # samba group
+gitUser=				                  # git user for local git server
 mntpnt=/mnt/backup                # mount point
 bkpdir=/mnt/backup/$srvrname    	# backup dir
 websrvr=var/www                   # web server root dir
@@ -72,7 +73,7 @@ echo "$ip   $srvrname" >>/etc/hosts
 
 # First install rsync package and then restore home dir for admin user
 apt-get install rsync
-rsync -arvp $bkpdir/home/$admin/ /home/$admin
+rsync -arvp $bkpdir/home/$adminUser/ /home/$adminUser
 
 ## setup systemd-timesyncd for system time synchoronization
 apt install systemd-timesyncd
@@ -279,7 +280,6 @@ ufw enable
 
 ############ miscellaneous file restoration
 
-rsync -arvp $bkpdir/home/$adminUser/ /home/$adminUser
 rsync -arvp $bkpdir/etc/ssh/sshd_config /etc/ssh
 #rsync -arvp $bkpdir/etc/php.ini /etc
 rsync -arvp $bkpdir/etc/php/$phpv/apache2/ /etc/php/$phpv/apache2
@@ -298,8 +298,8 @@ rsync -arvp $bkpdir/etc/logrotate.d/ /etc/logrotate.d
 
 ############ Setup Git and repositories
 apt-get install -y git
-adduser git
-chsh git -s /usr/bin/git-shell
+adduser $gitUser
+chsh $gitUser -s /usr/bin/git-shell
 # restore shell config
 rsync -arv $bkpdir/etc/shells /etc/
 # restore git ssh keys and repos
