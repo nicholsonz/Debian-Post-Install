@@ -363,7 +363,7 @@ service auditd start
 systemctl enable auditd
 
 # Restore aide-update.sh file to /usr/sbin for bash use
-rsync -arvp $bkpdir/home/zach/repo/scripts/aide-update.sh /usr/sbin
+rsync -arvp $bkpdir/home/$adminUser/repo/scripts/aide-update.sh /usr/sbin
 
 ############# Start and enable services
 systemctl enable --now cockpit.socket
